@@ -1,0 +1,35 @@
+def calculate_grade(subject, marks):
+    if subject.lower() == 'english':
+        if marks >= 90:
+            return 'A'
+        elif 80 <= marks < 90:
+            return 'B'
+        elif 70 <= marks < 80:
+            return 'C'
+        elif 60 <= marks < 70:
+            return 'D'
+        else:
+            return 'F'
+    elif subject.lower() == 'math':
+        if marks >= 90:
+            return 'A'
+        elif 80 <= marks < 90:
+            return 'B'
+        elif 70 <= marks < 80:
+            return 'C'
+        elif 60 <= marks < 70:
+            return 'D'
+        else:
+            return 'F'
+    else:
+        return 'Subject not found'
+
+# Example usage:
+english_marks = 85
+math_marks = 75
+
+english_grade = calculate_grade('English', english_marks)
+math_grade = calculate_grade('Math', math_marks)
+
+print(f"English Grade: {english_grade}")
+print(f"Math Grade: {math_grade}")
