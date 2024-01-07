@@ -18,18 +18,28 @@ class TeacherPortal:
             print(f"Assignment added for {student_name}: {assignment}.")
         else:
             print(f"Error: {student_name} not found.")
+            
+            def view_student_info(self, student_name):
+        if student_name in self.students:
+            student_info = self.students[student_name]
+            print(f"\nStudent Information for {student_name}:")
+            print(f"Marks: {student_info['marks']}")
+            print("Assignments:", ", ".join(student_info['assignments']))
+        else:
+            print(f"Error: {student_name} not found.")
 
-    def display_menu(self):
+   def display_menu(self):
         print("\nTeacher Portal Menu:")
         print("1. Add Student")
         print("2. Give Marks")
         print("3. Add Assignment")
-        print("4. Exit")
+        print("4. View Student Info")
+        print("5. Exit")
 
     def run_portal(self):
         while True:
             self.display_menu()
-            choice = input("Enter your choice (1-4): ")
+            choice = input("Enter your choice (1-5): ")
 
             if choice == '1':
                 student_name = input("Enter student name: ")
@@ -43,11 +53,14 @@ class TeacherPortal:
                 assignment = input("Enter assignment: ")
                 self.add_assignment(student_name, assignment)
             elif choice == '4':
+                student_name = input("Enter student name: ")
+                self.view_student_info(student_name)
+            elif choice == '5':
                 print("Exiting Teacher Portal.")
                 break
             else:
                 print("Invalid choice. Please enter a number between 1 and 4.")
-
+if __name__ == "__main__":
 teacher_portal = TeacherPortal()
 
 teacher_portal.run_portal()
