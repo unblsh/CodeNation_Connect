@@ -19,7 +19,7 @@ class TeacherPortal:
         else:
             print(f"Error: {student_name} not found.")
             
-            def view_student_info(self, student_name):
+    def view_student_info(self, student_name):
         if student_name in self.students:
             student_info = self.students[student_name]
             print(f"\nStudent Information for {student_name}:")
@@ -27,19 +27,27 @@ class TeacherPortal:
             print("Assignments:", ", ".join(student_info['assignments']))
         else:
             print(f"Error: {student_name} not found.")
+            
+    def view_all_students(self):
+       print("\nAll Students Information:")
+       for student_name, student_info in self.students.items():
+           print(f"\nStudent Name: {student_name}")
+           print(f"Marks: {student_info['marks']}")
+           print("Assignments:", ", ".join(student_info['assignments']))
 
-   def display_menu(self):
+    def display_menu(self):
         print("\nTeacher Portal Menu:")
         print("1. Add Student")
         print("2. Give Marks")
         print("3. Add Assignment")
         print("4. View Student Info")
-        print("5. Exit")
-
+        print("5. View All Students")
+        print("6. Exit")
+        
     def run_portal(self):
         while True:
             self.display_menu()
-            choice = input("Enter your choice (1-5): ")
+            choice = input("Enter your choice (1-6): ")
 
             if choice == '1':
                 student_name = input("Enter student name: ")
@@ -56,11 +64,16 @@ class TeacherPortal:
                 student_name = input("Enter student name: ")
                 self.view_student_info(student_name)
             elif choice == '5':
+                self.view_all_students()
+            elif choice == '6':
                 print("Exiting Teacher Portal.")
                 break
             else:
                 print("Invalid choice. Please enter a number between 1 and 4.")
+
+
 if __name__ == "__main__":
-teacher_portal = TeacherPortal()
+
+    teacher_portal = TeacherPortal()
 
 teacher_portal.run_portal()
