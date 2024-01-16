@@ -2,6 +2,7 @@ import os
 import csv
 from collections import defaultdict
 
+
 class StudentMarksSystem:
     def __init__(self):
         self.students = defaultdict(dict)
