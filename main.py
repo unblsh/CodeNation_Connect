@@ -6,6 +6,7 @@ from collections import defaultdict
 class StudentMarksSystem:
     def __init__(self):
         self.students = defaultdict(dict)
+        self.subject_weights = {'Math': 1, 'Science': 1, 'English': 1}
         self.load_data()
 
     def load_data(self):
@@ -13,6 +14,7 @@ class StudentMarksSystem:
         try:
             self.load_student_data('students.csv')
             self.load_marks_data('marks.csv')
+            self.load_subject_weights('weights.csv')
         except FileNotFoundError:
             print("Error: One or both of the CSV files not found.")
             self.handle_missing_files()
@@ -57,32 +59,81 @@ class StudentMarksSystem:
                     print(f"Error converting values for student {student_id}: {e}")
                     exit()
 
-    def calculate_average(self, student_id):
-        # Calculate the average marks of a student
+    def load_subject_weights(self, filename):
+        # Load subject weights from a CSV file
+        try:
+            with open(filename, 'r') as file:
+                reader = csv.DictReader(file, delimiter=";")
+                for row in reader:
+                    subject = row['Subject']
+                    weight = float(row['Weight'])
+                    self.subject_weights[subject] = weight
+        except FileNotFoundError:
+            print(f"Warning: {filename} not found. Using default weights for subjects.")
+
+    def validate_user_input(self, prompt, validator):
+        while True:
+            user_input = input(prompt)
+            try:
+                user_input = validator(user_input)
+                return user_input
+            except ValueError as e:
+                print(f"Invalid input. {e}")
+
+    def validate_subject_choice(self, user_input):
+        subject_mapping = {'1': 'Math', '2': 'Science', '3': 'English'}
+        if user_input in subject_mapping:
+            return subject_mapping[user_input]
+        else:
+            raise ValueError("Please enter a valid subject choice (1, 2, or 3).")
+
+    def validate_assignment_number(self, user_input):
+        try:
+            assignment_number = int(user_input)
+            if assignment_number > 0:
+                return assignment_number
+            else:
+                raise ValueError("Assignment number must be greater than 0.")
+        except ValueError:
+            raise ValueError("Please enter a valid assignment number.")
+
+    def calculate_weighted_average(self, student_id):
+        # Calculate the weighted average marks of a student
         if student_id in self.students:
-            marks = [value for subject_marks in self.students[student_id].values() for value in subject_marks if isinstance(value, int)]
-            if marks:
-                return sum(marks) / len(marks)
+            total_weighted_marks = 0
+            total_weight = 0
+
+            for subject, marks in self.students[student_id].items():
+                if subject not in ['Name', 'Class']:
+                    subject_weight = self.subject_weights.get(subject, 1)
+                    total_weighted_marks += sum(marks) * subject_weight
+                    total_weight += len(marks) * subject_weight
+
+            if total_weight > 0:
+                return total_weighted_marks / total_weight
+
         return None
 
     def generate_report(self):
-        # Generate a report based on processed data
-        for student_id, data in self.students.items():
-            average = self.calculate_average(student_id)
-            if average is not None:
+        # Generate a report based on processed data, sorted by weighted average
+        sorted_students = sorted(self.students.items(), key=lambda x: self.calculate_weighted_average(x[0]), reverse=True)
+        for student_id, data in sorted_students:
+            weighted_average = self.calculate_weighted_average(student_id)
+            if weighted_average is not None:
                 print(f"Student ID: {student_id}")
                 print(f"Name: {data['Name']}")
                 print(f"Class: {data['Class']}")
                 for subject, marks in data.items():
                     if subject not in ['Name', 'Class']:
                         print(f"{subject}: {', '.join(map(str, marks))}")
-                print(f"Average: {average:.2f}\n")
+                print(f"Weighted Average: {weighted_average:.2f}\n")
             else:
                 print(f"Student ID {student_id} not found or has invalid data.\n")
 
     def display_all_students(self):
-        # Display all students along with their IDs, names, and classes
-        for student_id, data in self.students.items():
+        # Display all students sorted by name
+        sorted_students = sorted(self.students.items(), key=lambda x: x[1]['Name'])
+        for student_id, data in sorted_students:
             print(f"Student ID: {student_id}")
             print(f"Name: {data['Name']}")
             print(f"Class: {data['Class']}\n")
@@ -110,13 +161,29 @@ class StudentMarksSystem:
                 print(f"Student ID: {student_id}")
                 print(f"Name: {data['Name']}")
                 print(f"Total Marks: {total_marks}")
-                print(f"Progress: {progress:.2f}%\n")
+                print(f"Progress: {progress:.2f}%")
+
+                # Nested Loop for tracking progress over time for each subject
+                for subject, marks in data.items():
+                    if subject not in ['Name', 'Class']:
+                        print(f"Subject: {subject}")
+                        previous_mark = None
+                        for assignment_number, assignment_mark in enumerate(marks, start=1):
+                            # Calculate progress based on the difference from the previous assignment's score
+                            if previous_mark is not None:
+                                assignment_progress = ((assignment_mark - previous_mark) / previous_mark) * 100
+                                print(f"  Assignment {assignment_number}: {assignment_mark} (Progress: {assignment_progress:.2f}%)")
+                            else:
+                                print(f"  Assignment {assignment_number}: {assignment_mark}")
+                            previous_mark = assignment_mark
+                print("\n")
             else:
                 print(f"Student ID {student_id} has no valid marks data.\n")
 
     def save_data(self):
         # Save data back to files if needed
         pass
+
 
 if __name__ == "__main__":
     try:
@@ -131,7 +198,7 @@ if __name__ == "__main__":
         print("3. Export All Students to CSV")
         print("4. Track Progress Over Time")
         print("5. Exit")
-        
+
         choice = input("Enter your choice (1/2/3/4/5): ")
 
         if choice == '1':
