@@ -1,26 +1,76 @@
 import os
 import csv
 from collections import defaultdict
+from abc import ABC, abstractmethod
+
 
 class Subject:
     def __init__(self, name, marks):
         self.name = name
         self.marks = marks
 
+
 class Student:
     def __init__(self, student_id, name, class_name):
         self.student_id = student_id
         self.name = name
         self.class_name = class_name
-        self.subjects = {}
+        self.subjects = []
 
     def add_subject(self, subject):
-        self.subjects[subject.name] = subject
+        self.subjects.append(subject)
 
-class MarksSystemBase:
+
+class MarksSystemBase(ABC):
+    @abstractmethod
+    def load_data(self):
+        pass
+
+    @abstractmethod
+    def handle_missing_files(self):
+        pass
+
+    @abstractmethod
+    def validate_user_input(self, prompt, validator):
+        pass
+
+    @abstractmethod
+    def validate_subject_choice(self, user_input):
+        pass
+
+    @abstractmethod
+    def validate_assignment_number(self, user_input):
+        pass
+
+    @abstractmethod
+    def calculate_average(self, student_id):
+        pass
+
+    @abstractmethod
+    def generate_report(self):
+        pass
+
+    @abstractmethod
+    def display_all_students(self):
+        pass
+
+    @abstractmethod
+    def export_students_to_csv(self, filename):
+        pass
+
+    @abstractmethod
+    def track_progress_over_time(self):
+        pass
+
+    @abstractmethod
+    def save_data(self):
+        pass
+
+
+class StudentMarksSystem(MarksSystemBase):
     def __init__(self):
-        self.students = defaultdict(Student)
-        self.subject_weights = {'Math': 1, 'Science': 1, 'English': 1}
+        super().__init__()
+        self.students = defaultdict(dict)
         self.load_data()
 
     def load_data(self):
@@ -50,7 +100,8 @@ class MarksSystemBase:
 
             for row in reader:
                 student_id = row['StudentID']
-                self.students[student_id] = Student(student_id, row['Name'], row['Class'])
+                self.students[student_id]['Name'] = row['Name']
+                self.students[student_id]['Class'] = row['Class']
 
     def load_marks_data(self, filename):
         # Load marks data from a CSV file
@@ -65,15 +116,9 @@ class MarksSystemBase:
             for row in reader:
                 student_id = row['StudentID']
                 try:
-                    math_marks = [int(mark) for mark in row['Math'].split(',')]
-                    science_marks = [int(mark) for mark in row['Science'].split(',')]
-                    english_marks = [int(mark) for mark in row['English'].split(',')]
-                    math_subject = Subject('Math', math_marks)
-                    science_subject = Subject('Science', science_marks)
-                    english_subject = Subject('English', english_marks)
-                    self.students[student_id].add_subject(math_subject)
-                    self.students[student_id].add_subject(science_subject)
-                    self.students[student_id].add_subject(english_subject)
+                    self.students[student_id]['Math'] = [int(mark) for mark in row['Math'].split(',')]
+                    self.students[student_id]['Science'] = [int(mark) for mark in row['Science'].split(',')]
+                    self.students[student_id]['English'] = [int(mark) for mark in row['English'].split(',')]
                 except ValueError as e:
                     print(f"Error converting values for student {student_id}: {e}")
                     exit()
@@ -116,45 +161,35 @@ class MarksSystemBase:
         except ValueError:
             raise ValueError("Please enter a valid assignment number.")
 
-class StudentMarksSystem(MarksSystemBase):
-    def calculate_weighted_average(self, student_id):
-        # Calculate the weighted average marks of a student
+    def calculate_average(self, student_id):
+        # Calculate the average marks of a student
         if student_id in self.students:
-            total_weighted_marks = 0
-            total_weight = 0
-
-            for subject in self.students[student_id].subjects.values():
-                subject_weight = self.subject_weights.get(subject.name, 1)
-                total_weighted_marks += sum(subject.marks) * subject_weight
-                total_weight += len(subject.marks) * subject_weight
-
-            if total_weight > 0:
-                return total_weighted_marks / total_weight
-
+            marks = [value for subject_marks in self.students[student_id].values() for value in subject_marks if isinstance(value, int)]
+            if marks:
+                return sum(marks) / len(marks)
         return None
 
     def generate_report(self):
-        # Generate a report based on processed data, sorted by weighted average
-        sorted_students = sorted(self.students.items(), key=lambda x: self.calculate_weighted_average(x[0]), reverse=True)
-        for student_id, student in sorted_students:
-            weighted_average = self.calculate_weighted_average(student_id)
-            if weighted_average is not None:
+        # Generate a report based on processed data
+        for student_id, data in self.students.items():
+            average = self.calculate_average(student_id)
+            if average is not None:
                 print(f"Student ID: {student_id}")
-                print(f"Name: {student.name}")
-                print(f"Class: {student.class_name}")
-                for subject in student.subjects.values():
-                    print(f"{subject.name}: {', '.join(map(str, subject.marks))}")
-                print(f"Weighted Average: {weighted_average:.2f}\n")
+                print(f"Name: {data['Name']}")
+                print(f"Class: {data['Class']}")
+                for subject, marks in data.items():
+                    if subject not in ['Name', 'Class']:
+                        print(f"{subject}: {', '.join(map(str, marks))}")
+                print(f"Average: {average:.2f}\n")
             else:
                 print(f"Student ID {student_id} not found or has invalid data.\n")
 
     def display_all_students(self):
-        # Display all students sorted by name
-        sorted_students = sorted(self.students.items(), key=lambda x: x[1].name)
-        for student_id, student in sorted_students:
+        # Display all students along with their IDs, names, and classes
+        for student_id, data in self.students.items():
             print(f"Student ID: {student_id}")
-            print(f"Name: {student.name}")
-            print(f"Class: {student.class_name}\n")
+            print(f"Name: {data['Name']}")
+            print(f"Class: {data['Class']}\n")
 
     def export_students_to_csv(self, filename='all_students.csv'):
         # Export all students' data to a CSV file
@@ -162,37 +197,38 @@ class StudentMarksSystem(MarksSystemBase):
             fieldnames = ['StudentID', 'Name', 'Class', 'Math', 'Science', 'English']
             writer = csv.DictWriter(file, fieldnames=fieldnames, delimiter=";")
             writer.writeheader()
-            for student_id, student in self.students.items():
-                row = {'StudentID': student_id, 'Name': student.name, 'Class': student.class_name,
-                       'Math': ','.join(map(str, student.subjects['Math'].marks)),
-                       'Science': ','.join(map(str, student.subjects['Science'].marks)),
-                       'English': ','.join(map(str, student.subjects['English'].marks))}
+            for student_id, data in self.students.items():
+                row = {'StudentID': student_id, 'Name': data['Name'], 'Class': data['Class'],
+                       'Math': ','.join(map(str, data['Math'])),
+                       'Science': ','.join(map(str, data['Science'])),
+                       'English': ','.join(map(str, data['English']))}
                 writer.writerow(row)
         print(f"All students' data exported to {filename}.\n")
 
     def track_progress_over_time(self):
         # Implement progress tracking over time
-        for student_id, student in self.students.items():
-            total_marks = sum(mark for subject in student.subjects.values() for mark in subject.marks)
+        for student_id, data in self.students.items():
+            total_marks = sum(sum(subject_marks) for subject_marks in data.values() if isinstance(subject_marks, list))
             if total_marks > 0:
-                progress = (total_marks / (100 * len(student.subjects))) * 100
+                progress = (total_marks / (100 * len(data))) * 100
                 print(f"Student ID: {student_id}")
-                print(f"Name: {student.name}")
+                print(f"Name: {data['Name']}")
                 print(f"Total Marks: {total_marks}")
                 print(f"Progress: {progress:.2f}%")
 
                 # Nested Loop for tracking progress over time for each subject
-                for subject in student.subjects.values():
-                    print(f"Subject: {subject.name}")
-                    previous_mark = None
-                    for assignment_number, assignment_mark in enumerate(subject.marks, start=1):
-                        # Calculate progress based on the difference from the previous assignment's score
-                        if previous_mark is not None:
-                            assignment_progress = ((assignment_mark - previous_mark) / previous_mark) * 100
-                            print(f"  Assignment {assignment_number}: {assignment_mark} (Progress: {assignment_progress:.2f}%)")
-                        else:
-                            print(f"  Assignment {assignment_number}: {assignment_mark}")
-                        previous_mark = assignment_mark
+                for subject, marks in data.items():
+                    if subject not in ['Name', 'Class']:
+                        print(f"Subject: {subject}")
+                        previous_mark = None
+                        for assignment_number, assignment_mark in enumerate(marks, start=1):
+                            # Calculate progress based on the difference from the previous assignment's score
+                            if previous_mark is not None:
+                                assignment_progress = ((assignment_mark - previous_mark) / previous_mark) * 100
+                                print(f"  Assignment {assignment_number}: {assignment_mark} (Progress: {assignment_progress:.2f}%)")
+                            else:
+                                print(f"  Assignment {assignment_number}: {assignment_mark}")
+                            previous_mark = assignment_mark
                 print("\n")
             else:
                 print(f"Student ID {student_id} has no valid marks data.\n")
@@ -200,6 +236,7 @@ class StudentMarksSystem(MarksSystemBase):
     def save_data(self):
         # Save data back to files if needed
         pass
+
 
 if __name__ == "__main__":
     try:
